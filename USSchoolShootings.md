@@ -6,6 +6,8 @@ This is not a fully vetted analysis. I copied data from Wikipedia (sources given
 
 Follow-ups would include confirming input data, confirming data conversion, and taking a closer look at the estimated population model.
 
+The data does combine a number of different scenarios (accidents, adults, and others), includes colleges, and excludes other "non gun" events such as the [Bath School massacre](https://en.wikipedia.org/wiki/Bath_School_disaster).
+
 ``` r
 library(dplyr)
 ```
