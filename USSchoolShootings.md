@@ -331,3 +331,9 @@ ggplot(yearly, aes(x = year, y = (count/US.population)/base_rate_e)) +
 ![](USSchoolShootings_files/figure-markdown_github/unnamed-chunk-1-6.png)
 
 In this analysis we are being conservative in using an inflated comparison rate (to try to not over-emphasize increase). The inflation is due to including only years in the 1950s and 1960s that had a shooting event and also there is a large event in the interval even though large events were rare in that time-frame (so we have not chosen an interval that avoids such).
+
+Also notice the US general population death rate by firearms does not follow the strong upward trend we are seeing in schools: <https://www.statista.com/statistics/186951/deaths-by-firearm-related-injuries-in-the-us-by-gender-since-1970/>.
+
+[<img src="FirearmGraph.png">](https://www.statista.com/statistics/186951/deaths-by-firearm-related-injuries-in-the-us-by-gender-since-1970/)
+
+For more on this sort of topic please see [here](https://twitter.com/datavisitor/status/997286180529074178) and [here](http://annals.org/aim/fullarticle/2679556/comparison-rates-firearm-nonfirearm-homicide-suicide-black-white-non-hispanic).
