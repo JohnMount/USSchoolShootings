@@ -179,6 +179,7 @@ yearly <- school_shootings %>%
 ggplot(yearly, aes(x = year, y = Deaths)) + 
   geom_col() + 
   geom_smooth(se = FALSE) +
+  scale_x_continuous(breaks = seq(1900, 2020, by = 10)) +
   ggtitle("US School Shooting Fatalities by Year",
           subtitle = "https://en.wikipedia.org/wiki/List_of_school_shootings_in_the_United_States")
 ```
@@ -188,7 +189,20 @@ ggplot(yearly, aes(x = year, y = Deaths)) +
 ![](USSchoolShootings_files/figure-markdown_github/unnamed-chunk-1-1.png)
 
 ``` r
-# get per-year popluation estimates
+ggplot(yearly, aes(x = year, y = count)) + 
+  geom_col() + 
+  geom_smooth(se = FALSE) +
+  scale_x_continuous(breaks = seq(1900, 2020, by = 10)) +
+  ggtitle("US School Shooting Events by Year",
+          subtitle = "https://en.wikipedia.org/wiki/List_of_school_shootings_in_the_United_States")
+```
+
+    ## `geom_smooth()` using method = 'loess'
+
+![](USSchoolShootings_files/figure-markdown_github/unnamed-chunk-1-2.png)
+
+``` r
+# get per-year population estimates
 # read per-decade counts
 us_population <- read.csv("USpopulation.csv", stringsAsFactors = FALSE)
 # confirm counts by 10s in order
@@ -243,16 +257,29 @@ est <- approx(us_population$year, log(us_population$US.population), yearly$year,
               method = "linear")
 yearly$US.population <- exp(est$y)
 
-# plot the ratio
+# plot the rate
 ggplot(yearly, aes(x = year, y = Deaths/US.population)) + 
   geom_col() + 
   geom_smooth(se = FALSE, color = "red") +
+  scale_x_continuous(breaks = seq(1900, 2020, by = 10)) +
   ggtitle("US School Shootings Fatalities by Year Scaled by Estimated US Population")
 ```
 
     ## `geom_smooth()` using method = 'loess'
 
-![](USSchoolShootings_files/figure-markdown_github/unnamed-chunk-1-2.png)
+![](USSchoolShootings_files/figure-markdown_github/unnamed-chunk-1-3.png)
+
+``` r
+ggplot(yearly, aes(x = year, y = count/US.population)) + 
+  geom_col() + 
+  geom_smooth(se = FALSE, color = "red") +
+  scale_x_continuous(breaks = seq(1900, 2020, by = 10)) +
+  ggtitle("US School Shootings, Events by Year Scaled by Estimated US Population")
+```
+
+    ## `geom_smooth()` using method = 'loess'
+
+![](USSchoolShootings_files/figure-markdown_github/unnamed-chunk-1-4.png)
 
 ``` r
 # re-plot normalized a typical non-zero rate in the 1950s and 1960s.
@@ -260,24 +287,45 @@ ggplot(yearly, aes(x = year, y = Deaths/US.population)) +
 # lots of issues on what to use as the base rate).
 base_rate_f <- yearly %>%
   filter((year>=1950) & (year<=1969)) %>%
-  summarize(count = sum(count), 
+  summarize(count = mean(count), 
             Deaths = mean(Deaths), 
             US.population = mean(US.population),
             rate = mean(Deaths/US.population),
+            events = mean(count/US.population),
             n = n())
-base_rate <- base_rate_f$rate
+base_rate_d <- base_rate_f$rate
 
-ggplot(yearly, aes(x = year, y = (Deaths/US.population)/base_rate)) + 
+ggplot(yearly, aes(x = year, y = (Deaths/US.population)/base_rate_d)) + 
   geom_col() + 
   geom_smooth(se = FALSE, color = "red") +
   geom_hline(yintercept = 1, alpha= 0.5) +
   ylab("relative rate") +
-  ggtitle("US School Shootings Fatality Rate Relative to US Population",
+  scale_x_continuous(breaks = seq(1900, 2020, by = 10)) +
+  scale_y_continuous(breaks = seq(0, 8, by = 0.5)) +
+  ggtitle("US School Shootings, Fatality Rate Relative to US Population",
           subtitle = "scaled relative to 1950s through 1960s rate")
 ```
 
     ## `geom_smooth()` using method = 'loess'
 
-![](USSchoolShootings_files/figure-markdown_github/unnamed-chunk-1-3.png)
+![](USSchoolShootings_files/figure-markdown_github/unnamed-chunk-1-5.png)
+
+``` r
+base_rate_e <- base_rate_f$events
+
+ggplot(yearly, aes(x = year, y = (count/US.population)/base_rate_e)) + 
+  geom_col() + 
+  geom_smooth(se = FALSE, color = "red") +
+  geom_hline(yintercept = 1, alpha= 0.5) +
+  ylab("relative rate") +
+  scale_x_continuous(breaks = seq(1900, 2020, by = 10)) +
+  scale_y_continuous(breaks = seq(0, 10, by = 0.5)) +
+  ggtitle("US School Shootings, Event Rate Relative to US Population",
+          subtitle = "scaled relative to 1950s through 1960s rate")
+```
+
+    ## `geom_smooth()` using method = 'loess'
+
+![](USSchoolShootings_files/figure-markdown_github/unnamed-chunk-1-6.png)
 
 In this analysis we are being conservative in using an inflated comparison rate (to try to not over-emphasize increase). The inflation is due to including only years in the 1950s and 1960s that had a shooting event and also there is a large event in the interval even though large events were rare in that time-frame (so we have not chosen an interval that avoids such).
