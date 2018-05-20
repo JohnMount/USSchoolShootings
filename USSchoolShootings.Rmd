@@ -1,0 +1,123 @@
+---
+title: "US School Shootings by Year"
+output: github_document
+author: "John Mount"
+---
+
+This is not a fully vetted analysis.  I copied data from Wikipedia (sources given below) and took a quick look. Also it would be good to normalize by the US school population (or at least US school age population) instead of the total US population.  But the observed ratio (current rate about 4 times the 1950s through 1960s typical rate) is large enough that it is plausible the rate is with investigating further (i.e. it is probably not entirely due to un-modeled changes in population age or school attendance rates).  
+
+Follow-ups would include confirming input data, confirming data conversion, and taking a closer look at the estimated population model.
+
+```{r}
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(forecast)
+# https://en.wikipedia.org/wiki/List_of_school_shootings_in_the_United_States
+school_shootings <- read.csv("SchoolShootings.csv", stringsAsFactors = FALSE)
+school_shootings <- school_shootings %>%
+  mutate(dt = mdy(Date)) %>%
+  mutate(year = year(dt)) 
+
+# check we parsed correctly
+head(school_shootings)
+school_shootings[is.na(school_shootings$dt), , drop = FALSE]
+tail(school_shootings)
+
+school_shootings <- school_shootings %>%
+  filter(year>=1900)
+
+# confirm data is clean (another parse check)
+odd <- c(which(school_shootings$dt[-1] < school_shootings$dt[-nrow(school_shootings)]),
+         which(is.na(as.numeric(school_shootings$Injuries))),
+         which(is.na(school_shootings$Deaths)),
+         which(is.na(school_shootings$Date)))
+odd <- sort(unique(odd))
+print(odd)
+idxs <- sort(unique(pmin(nrow(school_shootings),pmax(1,c(odd, odd+1, odd-1)))))
+school_shootings[idxs, c("Date", "dt", "Deaths", "Injuries", "Location"), drop=FALSE]
+
+# clean up a bit
+school_shootings$Injuries <- as.numeric(school_shootings$Injuries)
+school_shootings <- school_shootings %>%
+  filter((!is.na(Deaths)) & (!is.na(Date)))
+
+# arrange dates
+school_shootings <- school_shootings %>%
+  arrange(dt)
+
+yearly <- school_shootings %>%
+  mutate(dt = mdy(Date)) %>%
+  mutate(year = year(dt)) %>%
+  group_by(year) %>%
+  summarize(count = n(), 
+            Deaths = sum(Deaths), 
+            Injuries = sum(Injuries)) 
+
+ggplot(yearly, aes(x = year, y = Deaths)) + 
+  geom_col() + 
+  geom_smooth(se = FALSE) +
+  ggtitle("US School Shooting Fatalities by Year",
+          subtitle = "https://en.wikipedia.org/wiki/List_of_school_shootings_in_the_United_States")
+
+# get per-year popluation estimates
+# read per-decade counts
+us_population <- read.csv("USpopulation.csv", stringsAsFactors = FALSE)
+# confirm counts by 10s in order
+assertthat::assert_that(
+  all(us_population$year == 
+        seq(from = min(us_population$year), by = 10, length.out = nrow(us_population))))
+
+us_population <- us_population %>%
+  filter(year>=1900) %>% 
+  arrange(year) 
+# build an ARIMA model of the log-population time series
+us_pop_model <- auto.arima(log(us_population$US.population))
+print(us_pop_model)
+# ad future population estimate to table
+us_pop_est <- exp(as.data.frame(forecast(us_pop_model, h=1))[["Point Forecast"]][[1]])
+us_population <- rbind(us_population, 
+                       data.frame(year = max(us_population$year) + 10,
+                                  US.population = us_pop_est))
+# confirm us_population spans region of interest.
+assertthat::assert_that(min(us_population$year) <= min(yearly$year))
+assertthat::assert_that(max(us_population$year) >= max(yearly$year))
+
+
+# interpolate all needed years (linear on log scale, so geometric estimate)
+est <- approx(us_population$year, log(us_population$US.population), yearly$year,
+              method = "linear")
+yearly$US.population <- exp(est$y)
+
+# plot the ratio
+ggplot(yearly, aes(x = year, y = Deaths/US.population)) + 
+  geom_col() + 
+  geom_smooth(se = FALSE, color = "red") +
+  ggtitle("US School Shootings Fatalities by Year Scaled by estimated US Population")
+
+# re-plot normalized a typical non-zero rate in the 1950s and 1960s.
+# only looking at non-zero years (inflates the base-rate, but data is wild so 
+# lots of issues on what to use as the base rate).
+base_rate_f <- yearly %>%
+  filter((year>=1950) & (year<=1969)) %>%
+  summarize(count = sum(count), 
+            Deaths = mean(Deaths), 
+            US.population = mean(US.population),
+            rate = mean(Deaths/US.population),
+            n = n())
+base_rate <- base_rate_f$rate
+
+ggplot(yearly, aes(x = year, y = (Deaths/US.population)/base_rate)) + 
+  geom_col() + 
+  geom_smooth(se = FALSE, color = "red") +
+  geom_hline(yintercept = 1, alpha= 0.5) +
+  ylab("relative rate") +
+  ggtitle("US School Shootings Fatality Rate per US Population",
+          subtitle = "scaled relative to 1950s through 1960s rate")
+```
+
+In this analysis we are being conservative in using an inflated comparison rate (to
+try to not over-emphasize increase). The inflation is due to including only years 
+in the 1950s and 1960s that had a shooting event and also there is a large event 
+in the interval even though large events were rare in that time-frame
+(so we have not chosen an interval that avoids such).
