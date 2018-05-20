@@ -247,7 +247,7 @@ yearly$US.population <- exp(est$y)
 ggplot(yearly, aes(x = year, y = Deaths/US.population)) + 
   geom_col() + 
   geom_smooth(se = FALSE, color = "red") +
-  ggtitle("US School Shootings Fatalities by Year Scaled by estimated US Population")
+  ggtitle("US School Shootings Fatalities by Year Scaled by Estimated US Population")
 ```
 
     ## `geom_smooth()` using method = 'loess'
@@ -272,7 +272,7 @@ ggplot(yearly, aes(x = year, y = (Deaths/US.population)/base_rate)) +
   geom_smooth(se = FALSE, color = "red") +
   geom_hline(yintercept = 1, alpha= 0.5) +
   ylab("relative rate") +
-  ggtitle("US School Shootings Fatality Rate per US Population",
+  ggtitle("US School Shootings Fatality Rate Relative to US Population",
           subtitle = "scaled relative to 1950s through 1960s rate")
 ```
 
